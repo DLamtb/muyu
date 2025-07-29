@@ -1136,7 +1136,19 @@ body {
 }
 
 /* Font size classes */
-.font-small { font-size: 1rem; }
-.font-medium { font-size: 1.2rem; }
-.font-large { font-size: 1.5rem; }
-.font-extra-large { font-size: 1.8rem; }
+.font-small {
+    font-size: 1rem;
+    line-height: 1.4;
+}
+.font-medium {
+    font-size: 1.2rem;
+    line-height: 1.5;
+}
+.font-large {
+    font-size: 1.5rem;
+    line-height: 1.6;
+}
+.font-extra-large {
+    font-size: 1.8rem;
+    line-height: 1.7;
+}

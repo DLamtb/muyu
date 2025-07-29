@@ -74,13 +74,32 @@ export class LyricsTextManager {
         const isMobile = window.innerWidth <= 768;
         const isSmallScreen = window.innerHeight <= 600;
 
+        // 根据当前字体大小计算行高
+        const baseLineHeight = isMobile ? 45 : 55;
+        const fontSizeMultiplier = this.getFontSizeMultiplier();
+        const dynamicLineHeight = Math.round(baseLineHeight * fontSizeMultiplier);
+
         return {
             visibleLines: isMobile ? (isSmallScreen ? 8 : 10) : 12,
             currentLinePosition: isMobile ? 3 : 4,
-            lineHeight: isMobile ? 45 : 55,
+            lineHeight: dynamicLineHeight,
             animationDuration: 400,
             charactersPerLine: isMobile ? 15 : 20
         };
+    }
+
+    /**
+     * 获取字体大小倍数
+     */
+    getFontSizeMultiplier() {
+        const fontSizeMultipliers = {
+            1: 0.85,  // font-small (1rem) -> 0.85倍行高
+            2: 1.0,   // font-medium (1.2rem) -> 1倍行高
+            3: 1.25,  // font-large (1.5rem) -> 1.25倍行高
+            4: 1.5    // font-extra-large (1.8rem) -> 1.5倍行高
+        };
+
+        return fontSizeMultipliers[this.fontSize] || 1.0;
     }
 
 
@@ -580,7 +599,16 @@ export class LyricsTextManager {
             this.textDisplayElement.classList.add(this.fontSizeMap[size]);
             this.fontSize = size;
 
-            console.log(`字体大小设置为: ${this.fontSizeMap[size]}`);
+            // 重新计算配置以适应新的字体大小
+            this.config = this.getResponsiveConfig();
+            this.applyLyricsStyles();
+
+            // 重新滚动到当前位置以适应新的行高
+            if (this.lines.length > 0) {
+                this.scrollToCurrentLine();
+            }
+
+            console.log(`字体大小设置为: ${this.fontSizeMap[size]}, 新行高: ${this.config.lineHeight}px`);
         }
     }
 
