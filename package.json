@@ -1,0 +1,30 @@
+{
+  "name": "buddhist-sutra-reader",
+  "version": "1.0.0",
+  "description": "A web application for reading Buddhist sutras with synchronized audio",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/optimize-assets.js",
+    "preview": "vite preview",
+    "serve": "vite preview",
+    "build:analyze": "vite build --mode analyze",
+    "clean": "node -e \"const fs=require('fs');if(fs.existsSync('dist'))fs.rmSync('dist',{recursive:true})\"",
+    "optimize:assets": "node scripts/optimize-assets.js"
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "keywords": [
+    "buddhist",
+    "sutra",
+    "meditation",
+    "audio",
+    "reading"
+  ],
+  "author": "",
+  "license": "MIT"
+}

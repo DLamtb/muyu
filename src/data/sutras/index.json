@@ -1,0 +1,20 @@
+{
+  "sutras": [
+    {
+      "id": "amitabha",
+      "title": "佛说阿弥陀经",
+      "filename": "amitabha.txt",
+      "description": "净土宗重要经典，描述阿弥陀佛极乐世界",
+      "category": "净土经典",
+      "length": "短经",
+      "difficulty": "初级"
+    }
+  ],
+  "categories": [
+    {
+      "id": "pure_land",
+      "name": "净土经典",
+      "description": "净土宗相关经典"
+    }
+  ]
+}

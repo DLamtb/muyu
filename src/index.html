@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>佛经诵读</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="佛经诵读应用，支持音频同步和文本高亮，帮助您更好地进行佛经学习和诵读">
+    <meta name="keywords" content="佛经,诵读,佛教,经典,阿弥陀经,音频,同步">
+    <meta name="author" content="佛经诵读应用">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="佛经诵读">
+    <meta property="og:description" content="佛经诵读应用，支持音频同步和文本高亮">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://buddhist-sutra-reader.pages.dev">
+    <meta property="og:image" content="/icon-512x512.png">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="佛经诵读">
+    <meta name="twitter:description" content="佛经诵读应用，支持音频同步和文本高亮">
+    <meta name="twitter:image" content="/icon-512x512.png">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#007aff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="佛经诵读">
+    <meta name="msapplication-TileColor" content="#007aff">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzAwN2FmZiIvPgo8c3ZnIHg9IjgiIHk9IjgiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CjxwYXRoIGQ9Im0xMiAzLTEuOTEyIDUuODEzYTIgMiAwIDAgMS0xLjI3NSAxLjI3NUwzIDEybDUuODEzIDEuOTEyYTIgMiAwIDAgMSAxLjI3NSAxLjI3NUwxMiAyMWwxLjkxMi01LjgxM2EyIDIgMCAwIDEgMS4yNzUtMS4yNzVMMjEgMTJsLTUuODEzLTEuOTEyYTIgMiAwIDAgMS0xLjI3NS0xLjI3NUwxMiAzeiIvPgo8L3N2Zz4KPC9zdmc+">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="./assets/audio/muyu.wav" as="audio">
+    <link rel="preload" href="./assets/audio/bowl.wav" as="audio">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/assets/styles/main.css">
+</head>
+<body>
+    <div id="app">
+        <header class="app-header">
+            <h1>佛经诵读</h1>
+        </header>
+
+        <main class="app-main">
+            <div class="controls-container glass-card">
+                <div class="playback-controls">
+                    <button id="play-pause-btn" class="pill-button">
+                        <span class="status-indicator stopped" id="play-status"></span>
+                        播放
+                    </button>
+                    <button id="reset-btn" class="pill-button secondary">重置</button>
+                </div>
+
+                <div class="progress-container">
+                    <div id="progress-bar" class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="settings-controls">
+                    <div class="control-group">
+                        <label for="speed-slider">播放速度</label>
+                        <div class="speed-controls">
+                            <input type="range" id="speed-slider" class="modern-slider" min="1" max="10" step="0.5" value="1">
+                            <input type="number" id="speed-input" class="speed-input" min="1" max="10" step="0.1" value="1.0" placeholder="1.0">
+                            <span id="speed-display">1.0x</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="font-size-slider">文字大小</label>
+                        <input type="range" id="font-size-slider" class="modern-slider" min="1" max="4" step="1" value="2">
+                        <span id="font-size-display">中</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="sutra-select">选择经典</label>
+                        <select id="sutra-select" class="modern-select">
+                            <option value="amitabha">佛说阿弥陀经</option>
+                            <option value="custom">自定义文本</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="custom-text-container" id="custom-text-container" style="display: none;">
+                    <textarea id="custom-text-input" class="modern-textarea" placeholder="请输入自定义文本..."></textarea>
+                </div>
+
+                <div class="export-controls">
+                    <button id="export-btn" class="pill-button secondary">
+                        <span id="export-spinner" class="loading-spinner" style="display: none;"></span>
+                        导出MP3
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-display-container glass-card">
+                <div class="reading-progress" id="reading-progress" style="display: none;">
+                    0%
+                </div>
+                <div id="text-display" class="text-display empty">
+                    请选择经典或输入自定义文本开始阅读
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
