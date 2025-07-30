@@ -14,6 +14,10 @@ export class AudioEngine {
         this.sequenceIndex = 0;
         this.sequenceStartTime = 0;
         this.playbackTimer = null;
+
+        // 移动端检测和优化
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.audioPool = new Map(); // 音频对象池，用于移动端优化
         
         // 音频文件路径配置
         this.audioConfig = {
@@ -62,7 +66,7 @@ export class AudioEngine {
         const loadPromises = Object.entries(this.audioConfig).map(async ([key, path]) => {
             try {
                 const audio = new Audio();
-                audio.preload = 'auto';
+                audio.preload = 'metadata'; // 移动端优化：只预加载元数据
                 
                 // 创建加载Promise
                 const loadPromise = new Promise((resolve, reject) => {
@@ -90,6 +94,20 @@ export class AudioEngine {
                 
                 // 存储音频对象
                 this.audioFiles.set(key, audio);
+
+                // 移动端：创建音频对象池
+                if (this.isMobile && key === 'muyu') {
+                    this.audioPool.set(key, []);
+                    // 为木鱼声音创建多个音频对象以避免播放冲突
+                    for (let i = 0; i < 3; i++) {
+                        const poolAudio = new Audio();
+                        poolAudio.preload = 'metadata';
+                        poolAudio.src = path;
+                        poolAudio.load();
+                        this.audioPool.get(key).push(poolAudio);
+                    }
+                    console.log(`为 ${key} 创建了音频对象池，包含 3 个对象`);
+                }
                 
                 return { key, success: true };
             } catch (error) {
@@ -120,7 +138,20 @@ export class AudioEngine {
             return;
         }
 
-        const audio = this.audioFiles.get(audioKey);
+        // 移动端优化：使用音频对象池
+        let audio;
+        if (this.isMobile && this.audioPool.has(audioKey)) {
+            const pool = this.audioPool.get(audioKey);
+            // 找到一个空闲的音频对象
+            audio = pool.find(a => a.paused || a.ended || a.currentTime === 0);
+            if (!audio) {
+                // 如果没有空闲的，使用第一个
+                audio = pool[0];
+            }
+        } else {
+            audio = this.audioFiles.get(audioKey);
+        }
+
         if (!audio) {
             const error = new Error(`音频文件未找到: ${audioKey}`);
             this.handleError(error);
@@ -128,6 +159,34 @@ export class AudioEngine {
         }
 
         try {
+            // 移动端优化：确保音频已加载
+            if (audio.readyState < 2) { // HAVE_CURRENT_DATA
+                await new Promise((resolve, reject) => {
+                    const onCanPlay = () => {
+                        audio.removeEventListener('canplay', onCanPlay);
+                        audio.removeEventListener('error', onError);
+                        resolve();
+                    };
+                    const onError = (e) => {
+                        audio.removeEventListener('canplay', onCanPlay);
+                        audio.removeEventListener('error', onError);
+                        reject(e);
+                    };
+                    audio.addEventListener('canplay', onCanPlay);
+                    audio.addEventListener('error', onError);
+
+                    // 强制加载
+                    audio.load();
+
+                    // 超时保护
+                    setTimeout(() => {
+                        audio.removeEventListener('canplay', onCanPlay);
+                        audio.removeEventListener('error', onError);
+                        resolve(); // 即使超时也继续尝试播放
+                    }, 1000);
+                });
+            }
+
             // 重置音频到开始位置
             audio.currentTime = 0;
 
