@@ -703,6 +703,37 @@ body {
     background: rgba(255, 255, 255, 0.3);
 }
 
+/* 循环播放按钮样式 */
+#loop-btn {
+    position: relative;
+    min-width: 100px;
+}
+
+#loop-btn .loop-icon {
+    font-size: 1.1em;
+    margin-right: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+#loop-btn.active {
+    background: var(--accent-color);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+#loop-btn.active .loop-icon {
+    animation: rotate 2s linear infinite;
+}
+
+#loop-btn.active:hover {
+    background: #0056b3;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 /* Modern slider component */
 .modern-slider {
     -webkit-appearance: none;

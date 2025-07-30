@@ -7,6 +7,7 @@ export class PlaybackControls {
         this.elements = {
             playPauseBtn: document.getElementById('play-pause-btn'),
             resetBtn: document.getElementById('reset-btn'),
+            loopBtn: document.getElementById('loop-btn'),
             progressBar: document.getElementById('progress-bar'),
             progressFill: document.getElementById('progress-fill'),
             playStatus: document.getElementById('play-status'),
@@ -15,12 +16,14 @@ export class PlaybackControls {
         
         this.isPlaying = false;
         this.isPaused = false;
+        this.isLooping = false;
         this.progress = 0;
-        
+
         // 回调函数
         this.onPlayPause = null;
         this.onReset = null;
         this.onProgressClick = null;
+        this.onLoopToggle = null;
         
         this.initializeEventListeners();
         this.updateUI();
@@ -43,6 +46,13 @@ export class PlaybackControls {
         if (this.elements.resetBtn) {
             this.elements.resetBtn.addEventListener('click', () => {
                 this.handleReset();
+            });
+        }
+
+        // 循环播放按钮
+        if (this.elements.loopBtn) {
+            this.elements.loopBtn.addEventListener('click', () => {
+                this.handleLoopToggle();
             });
         }
 
@@ -75,6 +85,20 @@ export class PlaybackControls {
         if (this.onReset) {
             this.onReset();
         }
+    }
+
+    /**
+     * 处理循环播放切换
+     */
+    handleLoopToggle() {
+        this.isLooping = !this.isLooping;
+        this.updateLoopButton();
+
+        if (this.onLoopToggle) {
+            this.onLoopToggle(this.isLooping);
+        }
+
+        console.log(`循环播放: ${this.isLooping ? '开启' : '关闭'}`);
     }
 
     /**
@@ -149,6 +173,7 @@ export class PlaybackControls {
     updateUI() {
         this.updatePlayButton();
         this.updateResetButton();
+        this.updateLoopButton();
         this.updateStatusIndicator();
     }
 
@@ -192,6 +217,22 @@ export class PlaybackControls {
         // 只有在播放或暂停状态时才启用重置按钮
         const shouldEnable = this.isPlaying || this.progress > 0;
         this.elements.resetBtn.disabled = !shouldEnable;
+    }
+
+    /**
+     * 更新循环按钮
+     */
+    updateLoopButton() {
+        if (!this.elements.loopBtn) return;
+
+        // 切换激活状态
+        if (this.isLooping) {
+            this.elements.loopBtn.classList.add('active');
+            this.elements.loopBtn.title = '关闭循环播放';
+        } else {
+            this.elements.loopBtn.classList.remove('active');
+            this.elements.loopBtn.title = '开启循环播放';
+        }
     }
 
     /**
@@ -299,5 +340,6 @@ export class PlaybackControls {
         if (callbacks.onPlayPause) this.onPlayPause = callbacks.onPlayPause;
         if (callbacks.onReset) this.onReset = callbacks.onReset;
         if (callbacks.onProgressClick) this.onProgressClick = callbacks.onProgressClick;
+        if (callbacks.onLoopToggle) this.onLoopToggle = callbacks.onLoopToggle;
     }
 }

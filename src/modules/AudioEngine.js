@@ -9,16 +9,15 @@ export class AudioEngine {
         this.audioFiles = new Map();
         this.isPlaying = false;
         this.isPaused = false;
+        this.isLooping = false;
         this.playbackSpeed = 1.0;
         this.currentSequence = null;
         this.sequenceIndex = 0;
         this.sequenceStartTime = 0;
         this.playbackTimer = null;
 
-        // 移动端检测和优化
+        // 移动端检测
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        this.audioPool = new Map(); // 音频对象池，用于移动端优化
-        this.audioContextUnlocked = false; // 音频上下文是否已解锁
         
         // 音频文件路径配置
         this.audioConfig = {
@@ -37,79 +36,6 @@ export class AudioEngine {
 
         // 测试音频文件是否可以访问
         this.testAudioUrls();
-
-        // 移动端：添加用户交互监听器来解锁音频上下文
-        if (this.isMobile) {
-            this.setupMobileAudioUnlock();
-        }
-    }
-
-    /**
-     * 设置移动端音频解锁
-     */
-    setupMobileAudioUnlock() {
-        const unlockAudio = async () => {
-            if (this.audioContextUnlocked) return;
-
-            console.log('尝试解锁移动端音频上下文...');
-
-            try {
-                // 尝试播放所有音频对象池中的音频（静音）
-                for (const [key, pool] of this.audioPool) {
-                    for (const audio of pool) {
-                        audio.muted = true;
-                        try {
-                            await audio.play();
-                            audio.pause();
-                            audio.currentTime = 0;
-                            audio.muted = false;
-                        } catch (e) {
-                            console.warn(`解锁音频 ${key} 失败:`, e);
-                        }
-                    }
-                }
-
-                this.audioContextUnlocked = true;
-                console.log('移动端音频上下文解锁成功');
-
-                // 移除事件监听器
-                document.removeEventListener('touchstart', unlockAudio);
-                document.removeEventListener('touchend', unlockAudio);
-                document.removeEventListener('click', unlockAudio);
-
-            } catch (error) {
-                console.warn('音频上下文解锁失败:', error);
-            }
-        };
-
-        // 添加多种用户交互事件监听器
-        document.addEventListener('touchstart', unlockAudio, { once: true });
-        document.addEventListener('touchend', unlockAudio, { once: true });
-        document.addEventListener('click', unlockAudio, { once: true });
-
-        console.log('已设置移动端音频解锁监听器');
-    }
-
-    /**
-     * 重试播放音频（移动端专用）
-     */
-    async retryPlayAudio(audioKey) {
-        if (!this.isMobile || !this.audioPool.has(audioKey)) return;
-
-        try {
-            const pool = this.audioPool.get(audioKey);
-            // 找到一个不同的音频对象
-            for (const audio of pool) {
-                if (audio.paused) {
-                    audio.currentTime = 0;
-                    await audio.play();
-                    console.log(`重试播放 ${audioKey} 成功`);
-                    break;
-                }
-            }
-        } catch (error) {
-            console.warn(`重试播放 ${audioKey} 失败:`, error);
-        }
     }
 
     /**
@@ -140,7 +66,7 @@ export class AudioEngine {
         const loadPromises = Object.entries(this.audioConfig).map(async ([key, path]) => {
             try {
                 const audio = new Audio();
-                audio.preload = 'metadata'; // 移动端优化：只预加载元数据
+                audio.preload = 'auto'; // 恢复完整预加载
                 
                 // 创建加载Promise
                 const loadPromise = new Promise((resolve, reject) => {
@@ -168,27 +94,6 @@ export class AudioEngine {
                 
                 // 存储音频对象
                 this.audioFiles.set(key, audio);
-
-                // 移动端：为所有音频创建对象池
-                if (this.isMobile) {
-                    this.audioPool.set(key, []);
-                    // 为木鱼创建更多对象（播放频率高）
-                    const poolSize = key === 'muyu' ? 5 : 2;
-                    for (let i = 0; i < poolSize; i++) {
-                        const poolAudio = new Audio();
-                        poolAudio.preload = 'metadata';
-                        poolAudio.src = path;
-                        poolAudio.volume = 1.0;
-
-                        // 移动端兼容性设置
-                        poolAudio.muted = false;
-                        poolAudio.autoplay = false;
-
-                        poolAudio.load();
-                        this.audioPool.get(key).push(poolAudio);
-                    }
-                    console.log(`为 ${key} 创建了音频对象池，包含 ${poolSize} 个对象`);
-                }
                 
                 return { key, success: true };
             } catch (error) {
@@ -219,29 +124,8 @@ export class AudioEngine {
             return;
         }
 
-        // 移动端优化：使用音频对象池
-        let audio;
-        if (this.isMobile && this.audioPool.has(audioKey)) {
-            const pool = this.audioPool.get(audioKey);
-            // 找到一个真正空闲的音频对象
-            audio = pool.find(a => {
-                return a.paused && (a.ended || a.currentTime === 0 || a.currentTime >= a.duration - 0.1);
-            });
-
-            if (!audio) {
-                // 如果没有完全空闲的，找一个最接近结束的
-                audio = pool.reduce((best, current) => {
-                    if (!best) return current;
-                    const bestProgress = best.currentTime / (best.duration || 1);
-                    const currentProgress = current.currentTime / (current.duration || 1);
-                    return currentProgress > bestProgress ? current : best;
-                });
-            }
-
-            console.log(`使用音频对象池播放 ${audioKey}，选择对象状态: paused=${audio.paused}, currentTime=${audio.currentTime.toFixed(2)}`);
-        } else {
-            audio = this.audioFiles.get(audioKey);
-        }
+        // 获取音频对象
+        const audio = this.audioFiles.get(audioKey);
 
         if (!audio) {
             const error = new Error(`音频文件未找到: ${audioKey}`);
@@ -250,39 +134,6 @@ export class AudioEngine {
         }
 
         try {
-            // 移动端：检查音频上下文是否已解锁
-            if (this.isMobile && !this.audioContextUnlocked) {
-                console.warn('移动端音频上下文未解锁，尝试播放可能失败');
-            }
-
-            // 移动端优化：确保音频已加载
-            if (audio.readyState < 2) { // HAVE_CURRENT_DATA
-                await new Promise((resolve, reject) => {
-                    const onCanPlay = () => {
-                        audio.removeEventListener('canplay', onCanPlay);
-                        audio.removeEventListener('error', onError);
-                        resolve();
-                    };
-                    const onError = (e) => {
-                        audio.removeEventListener('canplay', onCanPlay);
-                        audio.removeEventListener('error', onError);
-                        reject(e);
-                    };
-                    audio.addEventListener('canplay', onCanPlay);
-                    audio.addEventListener('error', onError);
-
-                    // 强制加载
-                    audio.load();
-
-                    // 超时保护
-                    setTimeout(() => {
-                        audio.removeEventListener('canplay', onCanPlay);
-                        audio.removeEventListener('error', onError);
-                        resolve(); // 即使超时也继续尝试播放
-                    }, 1000);
-                });
-            }
-
             // 重置音频到开始位置
             audio.currentTime = 0;
 
@@ -301,18 +152,8 @@ export class AudioEngine {
                         // 如果是因为播放被中断，不报错
                         if (error.name === 'AbortError' && !this.isPlaying) {
                             console.log(`${audioKey} 音频播放被正常中断`);
-                        } else if (this.isMobile && error.name === 'NotAllowedError') {
-                            console.warn(`移动端音频播放被阻止 (${audioKey})，可能需要用户交互`);
-                            // 尝试重新解锁音频上下文
-                            this.audioContextUnlocked = false;
                         } else {
                             console.warn(`播放音频失败 (${audioKey}):`, error);
-
-                            // 移动端：如果播放失败，尝试使用备用音频对象
-                            if (this.isMobile && this.audioPool.has(audioKey)) {
-                                console.log(`尝试使用备用音频对象播放 ${audioKey}`);
-                                this.retryPlayAudio(audioKey);
-                            }
                         }
                     });
                 }
@@ -794,6 +635,14 @@ export class AudioEngine {
     }
 
     /**
+     * 设置循环播放
+     */
+    setLooping(isLooping) {
+        this.isLooping = isLooping;
+        console.log(`循环播放已${isLooping ? '开启' : '关闭'}`);
+    }
+
+    /**
      * 设置播放速度
      */
     setPlaybackSpeed(speed) {
@@ -823,11 +672,32 @@ export class AudioEngine {
      * 完成播放
      */
     completePlayback() {
-        this.isPlaying = false;
-        this.isPaused = false;
-        this.notifyPlayStateChange(false);
-        this.notifySequenceComplete();
-        console.log('播放序列完成');
+        if (this.isLooping && this.textManager) {
+            // 循环播放：重新开始
+            console.log('循环播放：重新开始播放序列');
+
+            // 重置文本位置
+            this.textManager.resetPosition();
+
+            // 重新开始播放
+            setTimeout(async () => {
+                try {
+                    await this.startPlayback(this.textManager);
+                } catch (error) {
+                    console.error('循环播放重新开始失败:', error);
+                    this.handleError(error);
+                    this.stopPlayback();
+                }
+            }, 1000); // 1秒间隔后重新开始
+
+        } else {
+            // 正常结束播放
+            this.isPlaying = false;
+            this.isPaused = false;
+            this.notifyPlayStateChange(false);
+            this.notifySequenceComplete();
+            console.log('播放序列完成');
+        }
     }
 
     /**

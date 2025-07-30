@@ -83,7 +83,8 @@ export class UIController {
         this.playbackControls.setCallbacks({
             onPlayPause: () => this.handlePlayPause(),
             onReset: () => this.handleReset(),
-            onProgressClick: (percentage) => this.handleProgressClick(percentage)
+            onProgressClick: (percentage) => this.handleProgressClick(percentage),
+            onLoopToggle: (isLooping) => this.handleLoopToggle(isLooping)
         });
 
         // 设置控制回调
@@ -155,15 +156,34 @@ export class UIController {
         try {
             this.audioEngine.resetPlayback();
             this.playbackControls.reset();
-            
+
             if (this.textManager) {
                 this.textManager.resetPosition();
             }
-            
+
             this.showMessage('已重置');
         } catch (error) {
             console.error('重置失败:', error);
             this.showError('重置失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 处理循环播放切换
+     */
+    handleLoopToggle(isLooping) {
+        try {
+            this.audioEngine.setLooping(isLooping);
+            this.showMessage(isLooping ? '循环播放已开启' : '循环播放已关闭');
+
+            // 保存循环播放设置
+            const settings = this.storageManager.loadSettings();
+            settings.isLooping = isLooping;
+            this.storageManager.saveSettings(settings);
+
+        } catch (error) {
+            console.error('设置循环播放失败:', error);
+            this.showError('设置循环播放失败: ' + error.message);
         }
     }
 
@@ -347,6 +367,13 @@ export class UIController {
             
             // 应用音频引擎设置
             this.audioEngine.setPlaybackSpeed(savedSettings.playbackSpeed);
+
+            // 恢复循环播放设置
+            if (savedSettings.isLooping !== undefined) {
+                this.audioEngine.setLooping(savedSettings.isLooping);
+                this.playbackControls.isLooping = savedSettings.isLooping;
+                this.playbackControls.updateLoopButton();
+            }
             
             // 如果有保存的经书选择，更新选择
             if (savedSettings.selectedSutra && savedSettings.selectedSutra !== 'amitabha') {
